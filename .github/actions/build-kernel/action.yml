@@ -1,5 +1,5 @@
-name: 'Build OnePlus Kernel with KernelSU Next'
-description: 'Build OnePlus Kernel with KernelSU Next'
+name: 'Build OnePlus Kernel with SukiSU Ultra'
+description: 'Build OnePlus Kernel with SukiSU Ultra'
 
 inputs:
   op_config_json:
@@ -11,7 +11,7 @@ inputs:
     required: true
     type: choice
     options:
-      - KSUN
+      - SUKISU
       - KSU
   ksu_branch_or_hash:
     description: 'KSU branch or commit hash (empty = auto-detect by ksu_type)'
@@ -382,7 +382,6 @@ runs:
         KERNEL_PATCHES_DIR="$GITHUB_WORKSPACE/kernel_patches"
         SUSFS_DIR="$GITHUB_WORKSPACE/susfs4ksu"
         KSU_DIR="$KERNEL_PLATFORM_DIR/KernelSU"
-        KSUN_DIR="$KERNEL_PLATFORM_DIR/KernelSU-Next"
         LKM_DIR="$ARTIFACTS_DIR/lkm"
         mkdir -p "$ARTIFACTS_DIR"
         mkdir -p "$DEBUG_ARTIFACTS_DIR"
@@ -399,7 +398,6 @@ runs:
         echo "KERNEL_PATCHES_FOLDER=$KERNEL_PATCHES_DIR" >> "$GITHUB_ENV"
         echo "SUSFS_FOLDER=$SUSFS_DIR" >> "$GITHUB_ENV"
         echo "KSU_FOLDER=$KSU_DIR" >> "$GITHUB_ENV"
-        echo "KSUN_FOLDER=$KSUN_DIR" >> "$GITHUB_ENV"
         echo "LKM_FOLDER=$LKM_DIR" >> "$GITHUB_ENV"
         
         DEBUG_ZIP_NAME="debug_${OP_MODEL}_${OP_OS_VERSION}.zip"
@@ -949,16 +947,16 @@ runs:
         sed -i 's/protected_modules = \[.*\]/protected_modules = []/' common/modules.bzl || true
         echo "::endgroup::"
 
-    - name: Add KernelSU Next
+    - name: Add SukiSU Ultra
       shell: bash
-      if: ${{ inputs.ksu_type == 'KSUN' }}
+      if: ${{ inputs.ksu_type == 'SUKISU' }}
       run: |
         set -euo pipefail
-        echo "::group::Add KernelSU Next"
+        echo "::group::Add SukiSU Ultra"
         cd "$KERNEL_PLATFORM_FOLDER"
 
         if [ "${KSUMODE:-lkm}" = "lkm" ]; then
-          echo "Setting up KernelSU Next in LKM (Loadable Kernel Module) mode..."
+          echo "Setting up SukiSU Ultra in LKM (Loadable Kernel Module) mode..."
           
           echo "Ensuring GKI loadable module support in defconfig"
           printf '%s\n' \
@@ -976,18 +974,18 @@ runs:
             AUTH_HEADER=(-H "Authorization: Bearer ${{ inputs.github_token }}")
           fi
 
-          echo "Querying latest KernelSU-Next release assets..."
-          RELEASE_JSON=$(curl -sSL "${AUTH_HEADER[@]}" https://api.github.com/repos/KernelSU-Next/KernelSU-Next/releases/latest 2>/dev/null || true)
+          echo "Querying latest SukiSU-Ultra release assets..."
+          RELEASE_JSON=$(curl -sSL "${AUTH_HEADER[@]}" https://api.github.com/repos/SukiSU-Ultra/SukiSU-Ultra/releases/latest 2>/dev/null || true)
           REL_TAG=$(echo "$RELEASE_JSON" | jq -r .tag_name 2>/dev/null || true)
           if [ -z "$REL_TAG" ] || [ "$REL_TAG" = "null" ]; then
             echo "::warning::Authenticated GitHub API request failed or rate-limited. Trying unauthenticated..."
-            RELEASE_JSON=$(curl -sSL https://api.github.com/repos/KernelSU-Next/KernelSU-Next/releases/latest 2>/dev/null || true)
+            RELEASE_JSON=$(curl -sSL https://api.github.com/repos/SukiSU-Ultra/SukiSU-Ultra/releases/latest 2>/dev/null || true)
             REL_TAG=$(echo "$RELEASE_JSON" | jq -r .tag_name 2>/dev/null || true)
           fi
           if [ -z "$REL_TAG" ] || [ "$REL_TAG" = "null" ]; then
-            REL_TAG="v3.4.2"
+            REL_TAG="main"
           fi
-          echo "Using KernelSU-Next Release: $REL_TAG"
+          echo "Using SukiSU-Ultra Release: $REL_TAG"
 
           TARGET_KMI="${OP_ANDROID_VERSION}-${OP_KERNEL_VERSION}"
           echo "Target KMI: $TARGET_KMI"
@@ -997,16 +995,16 @@ runs:
           KSUD_URL=$(echo "$RELEASE_JSON" | jq -r '.assets[] | select(.name == "ksud-aarch64-linux-android") | .browser_download_url' 2>/dev/null | head -n 1 || true)
 
           if [ -z "$KSU_LKM_URL" ] || [ "$KSU_LKM_URL" = "null" ]; then
-            KSU_LKM_URL="https://github.com/KernelSU-Next/KernelSU-Next/releases/download/${REL_TAG}/aarch64_${TARGET_KMI}_kernelsu.ko"
+            KSU_LKM_URL="https://github.com/SukiSU-Ultra/SukiSU-Ultra/releases/download/${REL_TAG}/aarch64_${TARGET_KMI}_kernelsu.ko"
           fi
           if [ -z "$SUSFS_LKM_URL" ] || [ "$SUSFS_LKM_URL" = "null" ]; then
-            SUSFS_LKM_URL="https://github.com/KernelSU-Next/KernelSU-Next/releases/download/${REL_TAG}/${TARGET_KMI}_susfs_guard_lkm.ko"
+            SUSFS_LKM_URL="https://github.com/SukiSU-Ultra/SukiSU-Ultra/releases/download/${REL_TAG}/${TARGET_KMI}_susfs_guard_lkm.ko"
           fi
           if [ -z "$KSUD_URL" ] || [ "$KSUD_URL" = "null" ]; then
-            KSUD_URL="https://github.com/KernelSU-Next/KernelSU-Next/releases/download/${REL_TAG}/ksud-aarch64-linux-android"
+            KSUD_URL="https://github.com/SukiSU-Ultra/SukiSU-Ultra/releases/download/${REL_TAG}/ksud-aarch64-linux-android"
           fi
 
-          echo "Downloading KSUN LKM ($KSU_LKM_URL)..."
+          echo "Downloading SUKISU LKM ($KSU_LKM_URL)..."
           curl -sSL -o "$LKM_FOLDER/kernelsu.ko" "$KSU_LKM_URL" || true
           if [ ! -s "$LKM_FOLDER/kernelsu.ko" ]; then
             echo "::warning::Direct download failed, trying generic KMI fallback matching $OP_KERNEL_VERSION..."
@@ -1028,7 +1026,7 @@ runs:
           if [ -s "$LKM_FOLDER/susfs_guard_lkm.ko" ]; then
             echo "✅ susfs_guard_lkm.ko downloaded ($(stat -c%s "$LKM_FOLDER/susfs_guard_lkm.ko") bytes)"
           else
-            echo "ℹ️ No dedicated susfs_guard_lkm.ko asset for $TARGET_KMI (using integrated KSUN driver)"
+            echo "ℹ️ No dedicated susfs_guard_lkm.ko asset for $TARGET_KMI (using integrated SUKISU driver)"
             rm -f "$LKM_FOLDER/susfs_guard_lkm.ko"
           fi
 
@@ -1042,68 +1040,60 @@ runs:
             exit 1
           fi
 
-          echo "KSUN" >> "${ARTIFACTS_FOLDER}/${OP_MODEL}_${OP_OS_VERSION}.txt"
+          echo "SUKISU" >> "${ARTIFACTS_FOLDER}/${OP_MODEL}_${OP_OS_VERSION}.txt"
           echo "${REL_TAG} (LKM)" >> "${ARTIFACTS_FOLDER}/${OP_MODEL}_${OP_OS_VERSION}.txt"
           echo "KSUVER=${REL_TAG} (LKM)" >> $GITHUB_ENV
           echo "KSU_COMMIT_SHA=${REL_TAG}" >> $GITHUB_ENV
-          echo "KernelSU Next Version: ${REL_TAG} (LKM)"
-          echo "✅ KernelSU Next LKM acquired"
+          echo "SukiSU Ultra Version: ${REL_TAG} (LKM)"
+          echo "✅ SukiSU Ultra LKM acquired"
         else
-          echo "Adding KernelSU Next (Legacy Built-in)..."
+          echo "Adding SukiSU Ultra (Built-in)..."
           KSU_INPUT="${{ inputs.ksu_branch_or_hash }}"
           if [ -z "$KSU_INPUT" ]; then
-            curl --fail --location --proto '=https' -LSs "https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/next/kernel/setup.sh" | bash -
-          else
-            curl --fail --location --proto '=https' -LSs "https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/next/kernel/setup.sh" | bash -s "$KSU_INPUT"
+            KSU_INPUT="builtin"
           fi
+          curl --fail --location --proto '=https' -LSs "https://raw.githubusercontent.com/SukiSU-Ultra/SukiSU-Ultra/main/kernel/setup.sh" | bash -s "$KSU_INPUT"
           git submodule update --init --recursive
-          cd KernelSU-Next/kernel
-          
+
+          # setup.sh clones SukiSU-Ultra into KernelSU/ (older revisions: SukiSU-Ultra/)
+          KSU_SRC_DIR="KernelSU"
+          if [ ! -d "$KSU_SRC_DIR/kernel" ] && [ -d "SukiSU-Ultra/kernel" ]; then
+            KSU_SRC_DIR="SukiSU-Ultra"
+          fi
+          echo "KSU_FOLDER=$KERNEL_PLATFORM_FOLDER/$KSU_SRC_DIR" >> $GITHUB_ENV
+          cd "$KSU_SRC_DIR/kernel"
+
+          # Version for naming only; SukiSU's Kbuild computes its own version string
           COMMITS_COUNT=$(/usr/bin/git rev-list --count HEAD)
-          
-          if [ $COMMITS_COUNT -lt 2684 ]; then
-            BASE_VERSION=10200
-          else
-            BASE_VERSION=30000
-          fi
-          
-          KSU_VERSION=$(expr $COMMITS_COUNT "+" $BASE_VERSION)
-          sed -i "s/DKSU_VERSION=11998/DKSU_VERSION=${KSU_VERSION}/" Makefile 2>/dev/null || true
-          if [ -f Kbuild ]; then
-            echo "ccflags-y += -DKSU_VERSION=${KSU_VERSION} -DKSU_VERSION_OVERRIDE=${KSU_VERSION}" >> Kbuild
-          fi
-          
+          KSU_VERSION=$(expr $COMMITS_COUNT "+" 10700)
+
           if [ -f ksu.c ]; then
             sed -i 's/#if defined(CONFIG_STACKPROTECTOR) && (defined(CONFIG_ARM64) && !defined(CONFIG_STACKPROTECTOR_PER_TASK))/#if 0/' ksu.c
           fi
-          
-          if [[ "$KSU_VERSION" -gt 33095 ]] && [[ "${{ env.KERNEL_VER }}" == "6.12" ]]; then
+
+          if [[ "${{ env.KERNEL_VER }}" == "6.12" ]] && [ -f Kbuild ]; then
             sed -i 's|ccflags-y += -I$(KSU_KERNEL_DIR) -I$(KSU_KERNEL_DIR)/include|ccflags-y += -I$(KSU_KERNEL_DIR) -I$(KSU_KERNEL_DIR)/include -I$(KSU_KERNEL_DIR)/include/uapi|' Kbuild
             sed -i 's|$(src)|$(abspath $(src))|' Kbuild
             sed -i 's|$(srctree)/$(src)|$(abspath $(srctree)/$(src))|' Kbuild
           fi
-          
-          if [ "$KSU_VERSION" -lt 12884 ]; then
-            echo "NEED_HOOKS=true" >> $GITHUB_ENV
-          else
-            echo "NEED_HOOKS=false" >> $GITHUB_ENV
-          fi
-          
+
+          echo "NEED_HOOKS=false" >> $GITHUB_ENV
+
           cd ..
           KSU_COMMIT_SHA=$(git rev-parse HEAD)
           echo "KSU_COMMIT_SHA=$KSU_COMMIT_SHA" >> $GITHUB_ENV
-          
-          echo "Add KSUN Configuration Settings"
+
+          echo "Add SUKISU Configuration Settings"
           printf '%s\n' \
             'CONFIG_KSU=y' \
             'CONFIG_KSU_KPROBES_HOOK=n' \
             >> "$COMMON_KERNEL_FOLDER/arch/arm64/configs/gki_defconfig"
-          
-          echo "KSUN" >> "${ARTIFACTS_FOLDER}/${OP_MODEL}_${OP_OS_VERSION}.txt"
+
+          echo "SUKISU" >> "${ARTIFACTS_FOLDER}/${OP_MODEL}_${OP_OS_VERSION}.txt"
           echo "$KSU_VERSION" >> "${ARTIFACTS_FOLDER}/${OP_MODEL}_${OP_OS_VERSION}.txt"
           echo "KSUVER=$KSU_VERSION" >> $GITHUB_ENV
-          echo "KernelSU Next Version: $KSU_VERSION"
-          echo "✅ KernelSU Next added (commit: ${KSU_COMMIT_SHA:0:8})"
+          echo "SukiSU Ultra Version: $KSU_VERSION"
+          echo "✅ SukiSU Ultra added (commit: ${KSU_COMMIT_SHA:0:8})"
         fi
         echo "::endgroup::"
 
@@ -1172,7 +1162,7 @@ runs:
         fi
         echo "✅ Verified SUSFS kernel patch exists: $target_patch"
 
-        if [ "${KSUMODE:-lkm}" != "lkm" ]; then
+        if [ "${KSUMODE:-lkm}" != "lkm" ] && [ "${{ inputs.ksu_type }}" != "SUKISU" ]; then
           ksu_patch="$SUSFS_FOLDER/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch"
           if [ ! -f "$ksu_patch" ]; then
             echo "::error::SUSFS KernelSU patch not found: $ksu_patch"
@@ -1218,118 +1208,40 @@ runs:
         if [ "${KSUMODE:-lkm}" != "lkm" ]; then
           case "$susfs_version" in
             "v1.5.8")
-            if [ "${{ inputs.ksu_type }}" = "KSUN" ]; then
-              patch -p1 --forward --fuzz=3 < "$SUSFS_FOLDER/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch" || true
-              patch -p1 --forward --fuzz=3 < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/fix_apk_sign.c.patch"
-              patch -p1 --forward --fuzz=3 < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/fix_core_hook.c.patch"
-              patch -p1 --forward --fuzz=3 < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/fix_selinux.c.patch"
-              patch -p1 --forward --fuzz=3 < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/fix_ksud.c.patch"
+            if [ "${{ inputs.ksu_type }}" = "SUKISU" ]; then
+              echo "ℹ️ SukiSU Ultra ships its own SUSFS integration: KernelSU-side SUSFS patch skipped."
             else
               cd "$KSU_FOLDER"
               patch -p1 --forward --fuzz=3 < "$SUSFS_FOLDER/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch"
             fi
             ;;
           "v1.5.9"|"v1.5.10"|"v1.5.11"|"v1.5.12")
-            if [ "${{ inputs.ksu_type }}" = "KSUN" ]; then
-              cd "$KSUN_FOLDER"
-              patch -p1 --forward < "$SUSFS_FOLDER/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch" || true
-              mapfile -t rej_files < <(find ./kernel -maxdepth 2 -name "*.rej")
-              for rej_file in "${rej_files[@]}"; do
-                [ -f "$rej_file" ] || continue
-                file=$(basename "$rej_file" .c.rej)
-                echo "Patching file: $file.c with fix_$file.c.patch"
-                rm -f "$rej_file"
-                patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/fix_$file.c.patch"
-              done
-              patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/fix_kernel_compat.c.patch"
+            if [ "${{ inputs.ksu_type }}" = "SUKISU" ]; then
+              echo "ℹ️ SukiSU Ultra ships its own SUSFS integration: KernelSU-side SUSFS patch skipped."
             else
               cd "$KSU_FOLDER"
               patch -p1 --forward < "$SUSFS_FOLDER/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch"
             fi
             ;;
           "v2.0.0")
-            if [ "${{ inputs.ksu_type }}" = "KSUN" ]; then
-              cd "$KSUN_FOLDER"
-              patch -p1 --forward < "$SUSFS_FOLDER/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch" || true
-              mapfile -t rej_files < <(find ./kernel -name "*.rej")
-              for rej_file in "${rej_files[@]}"; do
-                [ -f "$rej_file" ] || continue
-                file=$(basename "$rej_file" .rej)
-                echo "Patching file: $file with fix_$file.patch"
-                rm -f "$rej_file"
-                patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/fix_$file.patch"
-              done
-              echo "Patching Hook Mode!"
-              patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/overwrite_hook_mode.patch"
-              echo "Patching KSU_TOOLKIT Support for SusFS kernel!"
-              patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/ksu_toolkit.patch"
-              if [ "$KSUVER" -le 33095 ]; then
-                echo "Patching Multi-manager Support for SusFS kernel!"
-                patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/multi_manager.patch"
-              fi
-              if [ "$KSUVER" -ge 33068 ] && [ "$KSUVER" -lt 33070 ]; then
-                echo "Patching Multi-manager sepolicy Support for SusFS kernel!"
-                patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/multi_sepolicy_fix.patch"
-              fi
+            if [ "${{ inputs.ksu_type }}" = "SUKISU" ]; then
+              echo "ℹ️ SukiSU Ultra ships its own SUSFS integration: KernelSU-side SUSFS patch skipped."
             else
               cd "$KSU_FOLDER"
               patch -p1 --forward < "$SUSFS_FOLDER/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch" || true
             fi
             ;;
           "v2.1.0")
-            if [ "${{ inputs.ksu_type }}" = "KSUN" ]; then
-              cd "$KSUN_FOLDER"
-              patch -p1 --forward < "$SUSFS_FOLDER/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch" || true
-              mapfile -t rej_files < <(find ./kernel -name "*.rej")
-              for rej_file in "${rej_files[@]}"; do
-                [ -f "$rej_file" ] || continue
-                file=$(basename "$rej_file" .rej)
-                echo "Patching file: $file with fix_$file.patch"
-                rm -f "$rej_file"
-                patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/fix_$file.patch"
-              done
-              echo "Patching Hook Mode!"
-              patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/overwrite_hook_mode.patch"
-              echo "Patching KSU_TOOLKIT Support for SusFS kernel!"
-              patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/ksu_toolkit.patch"
-              if [ "$KSUVER" -le 33095 ]; then
-                echo "Patching Multi-manager Support for SusFS kernel!"
-                patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/multi_manager.patch"
-              fi
-              if [ "$KSUVER" -ge 33068 ] && [ "$KSUVER" -lt 33070 ]; then
-                echo "Patching Multi-manager sepolicy Support for SusFS kernel!"
-                patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/multi_sepolicy_fix.patch"
-              fi
+            if [ "${{ inputs.ksu_type }}" = "SUKISU" ]; then
+              echo "ℹ️ SukiSU Ultra ships its own SUSFS integration: KernelSU-side SUSFS patch skipped."
             else
               cd "$KSU_FOLDER"
               patch -p1 --forward < "$SUSFS_FOLDER/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch" || true
             fi
             ;;
           "v2.2.0"|"v2.3.0")
-            if [ "${{ inputs.ksu_type }}" = "KSUN" ]; then
-              cd "$KSUN_FOLDER"
-              patch -p1 --forward < "$SUSFS_FOLDER/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch" || true
-              mapfile -t rej_files < <(find ./kernel -name "*.rej")
-              for rej_file in "${rej_files[@]}"; do
-                [ -f "$rej_file" ] || continue
-                file=$(basename "$rej_file" .rej)
-                fix_patch="$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/fix_$file.patch"
-                if [ -f "$fix_patch" ]; then
-                  echo "Patching file: $file with fix_$file.patch"
-                  rm -f "$rej_file"
-                  patch -p1 --forward < "$fix_patch"
-                elif [ -f "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/fix_${file}.c.patch" ]; then
-                  echo "Patching file: $file with fix_${file}.c.patch"
-                  rm -f "$rej_file"
-                  patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/fix_${file}.c.patch"
-                else
-                  echo "⚠️ No fix patch found for $file (reject file: $rej_file)"
-                fi
-              done
-              echo "Patching Hook Mode!"
-              patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/overwrite_hook_mode.patch"
-              echo "Patching KSU_TOOLKIT Support for SusFS kernel!"
-              patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/ksu_toolkit.patch"
+            if [ "${{ inputs.ksu_type }}" = "SUKISU" ]; then
+              echo "ℹ️ SukiSU Ultra ships its own SUSFS integration: KernelSU-side SUSFS patch skipped."
             else
               cd "$KSU_FOLDER"
               patch -p1 --forward < "$SUSFS_FOLDER/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch" || true
@@ -1341,7 +1253,7 @@ runs:
             ;;
         esac
         else
-          echo "ℹ️ LKM mode: In-tree KernelSU SUSFS patch skipped (modular KSUN driver used)."
+          echo "ℹ️ LKM mode: In-tree KernelSU SUSFS patch skipped (modular SukiSU driver used)."
         fi
         
         cd "$COMMON_KERNEL_FOLDER"
@@ -1468,7 +1380,7 @@ runs:
         
         # Verify no patch rejects (.rej) exist
         rej_count=0
-        for dir in "$COMMON_KERNEL_FOLDER" "${KSUN_FOLDER:-}" "${KSU_FOLDER:-}"; do
+        for dir in "$COMMON_KERNEL_FOLDER" "${KSU_FOLDER:-}"; do
           if [ -n "$dir" ] && [ -d "$dir" ]; then
             if find "$dir" -name "*.rej" -print | grep -q .; then
               echo "::error::SUSFS patches did not apply cleanly in $dir! Found .rej files:"
@@ -2066,10 +1978,7 @@ runs:
         echo "Customize Kernel Branding"
         cd "$COMMON_KERNEL_FOLDER"
         mkdir -p out
-        UNAME_BRAND="${OP_UNAME:-SakFi-OP}"
-        if [ "$UNAME_BRAND" = "OP-WILD" ]; then
-          UNAME_BRAND="SakFi-OP"
-        fi
+        UNAME_BRAND="encoren"
         CUSTOM_LOCALVERSION="-${ANDROID_VER}-${UNAME_BRAND}"
         echo "CUSTOM_LOCALVERSION=$CUSTOM_LOCALVERSION" >> "$GITHUB_ENV"
 
@@ -2293,7 +2202,7 @@ runs:
           scripts/config --file "$OUT/.config" -e KSU
         fi
 
-        LOCAL_LOCALVERSION="${CUSTOM_LOCALVERSION:--SakFi-OP}"
+        LOCAL_LOCALVERSION="${CUSTOM_LOCALVERSION:--encoren}"
         if [ -n "${LOCAL_LOCALVERSION:-}" ]; then
           scripts/config --file "$OUT/.config" --set-str LOCALVERSION "${LOCAL_LOCALVERSION}"
           scripts/config --file "$OUT/.config" -d LOCALVERSION_AUTO || true
@@ -2637,15 +2546,15 @@ runs:
         ZIP_MODEL=$(echo "$OP_MODEL" | sed 's/-[0-9]\+\.[0-9]\+\.[0-9]\+$//')
         if [ "${KSUMODE:-lkm}" = "lkm" ]; then
           if [ "${{ env.OP_SUSFS }}" = true ]; then
-            ZIP_NAME="SKF_${ZIP_MODEL}_${OP_OS_VERSION}_${KERNEL_FULL_VER}_${{ inputs.ksu_type }}_${KSUVER:-unknown}_SuSFS_LKM.zip"
+            ZIP_NAME="ENC_${ZIP_MODEL}_${OP_OS_VERSION}_${KERNEL_FULL_VER}_${{ inputs.ksu_type }}_${KSUVER:-unknown}_SuSFS_LKM.zip"
           else
-            ZIP_NAME="SKF_${ZIP_MODEL}_${OP_OS_VERSION}_${KERNEL_FULL_VER}_${{ inputs.ksu_type }}_${KSUVER:-unknown}_LKM.zip"
+            ZIP_NAME="ENC_${ZIP_MODEL}_${OP_OS_VERSION}_${KERNEL_FULL_VER}_${{ inputs.ksu_type }}_${KSUVER:-unknown}_LKM.zip"
           fi
         else
           if [ "${{ env.OP_SUSFS }}" = true ]; then
-            ZIP_NAME="SKF_${ZIP_MODEL}_${OP_OS_VERSION}_${KERNEL_FULL_VER}_${{ inputs.ksu_type }}_${KSUVER:-unknown}_SuSFS_${SUSVER:-unknown}.zip"
+            ZIP_NAME="ENC_${ZIP_MODEL}_${OP_OS_VERSION}_${KERNEL_FULL_VER}_${{ inputs.ksu_type }}_${KSUVER:-unknown}_SuSFS_${SUSVER:-unknown}.zip"
           else
-            ZIP_NAME="SKF_${ZIP_MODEL}_${OP_OS_VERSION}_${KERNEL_FULL_VER}_${{ inputs.ksu_type }}_${KSUVER:-unknown}.zip"
+            ZIP_NAME="ENC_${ZIP_MODEL}_${OP_OS_VERSION}_${KERNEL_FULL_VER}_${{ inputs.ksu_type }}_${KSUVER:-unknown}.zip"
           fi
         fi
         mkdir -p "$ARTIFACTS_FOLDER"
@@ -2696,9 +2605,9 @@ runs:
           echo "Kernel Uname: ${{ env.KERNEL_UNAME }}"
           echo "Build User: ${{ env.BUILD_USER }}"
           echo "Build Host: ${{ env.BUILD_HOST }}"
-          if [ "${{ inputs.ksu_type }}" = "KSUN" ]; then
-            echo "KSUN Version: ${KSUVER:-unknown}"
-            echo "KSUN commit SHA: ${KSU_SHA:-unknown}"
+          if [ "${{ inputs.ksu_type }}" = "SUKISU" ]; then
+            echo "SUKISU Version: ${KSUVER:-unknown}"
+            echo "SUKISU commit SHA: ${KSU_SHA:-unknown}"
           else
             echo "KSU Version: ${KSUVER:-unknown}"
             echo "KSU commit SHA: ${KSU_SHA:-unknown}"
@@ -2748,15 +2657,15 @@ runs:
           echo "| **KernelSU Mode** | \`${KSUMODE:-lkm}\` |"
           echo "| **Build User** | ${{ env.BUILD_USER }} |"
           echo "| **Build Host** | ${{ env.BUILD_HOST }} |"
-          if [ "${{ inputs.ksu_type }}" = "KSUN" ]; then
-            echo "| **KSUN Version** | ${KSUVER:-unknown} |"
+          if [ "${{ inputs.ksu_type }}" = "SUKISU" ]; then
+            echo "| **SUKISU Version** | ${KSUVER:-unknown} |"
           else
             echo "| **KSU Version** | ${KSUVER:-unknown} |"
           fi
           
           if [ "$KSU_SHA" != "unknown" ]; then
-            if [ "${{ inputs.ksu_type }}" = "KSUN" ]; then
-              echo "| **KSUN Commit** | [\`${KSU_SHA:0:8}\`](https://github.com/KernelSU-Next/KernelSU-Next/commit/$KSU_SHA) |"
+            if [ "${{ inputs.ksu_type }}" = "SUKISU" ]; then
+              echo "| **SUKISU Commit** | [\`${KSU_SHA:0:8}\`](https://github.com/SukiSU-Ultra/SukiSU-Ultra/commit/$KSU_SHA) |"
             else
               echo "| **KSU Commit** | [\`${KSU_SHA:0:8}\`](https://github.com/tiann/KernelSU/commit/$KSU_SHA) |"
             fi
