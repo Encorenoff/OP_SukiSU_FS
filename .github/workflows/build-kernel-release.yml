@@ -105,7 +105,7 @@ on:
         description: 'Enter KernelSU build json'
         required: true
         type: string
-        default: '[{"type":"ksun","hash":"dev"}]'
+        default: '[{"type":"sukisu","hash":"main"}]'
       ksu_mode:
         description: 'KernelSU Integration Mode (builtin = In-tree with full SUSFS support [Recommended], lkm = Modular LKM)'
         required: true
@@ -234,7 +234,7 @@ jobs:
           
           input="${{ github.event.inputs.op_model }}"
           ksu_options_raw='${{ github.event.inputs.ksu_options }}'
-          if ! ksu_options_normalized=$(echo "$ksu_options_raw" | jq -c 'map(if .type then .type |= ascii_upcase | if .hash == null then if .type == "KSUN" then .hash = "dev" elif .type == "KSU" then .hash = "main" else .hash end else . end else error("No type found") end)' 2>&1); then
+          if ! ksu_options_normalized=$(echo "$ksu_options_raw" | jq -c 'map(if .type then .type |= ascii_upcase | if .hash == null then if .type == "SUKISU" then .hash = "main" elif .type == "KSU" then .hash = "main" else .hash end else . end else error("No type found") end)' 2>&1); then
             echo "::error::ksu_options validation failed: $ksu_options_normalized"
             exit 1
           fi
@@ -337,9 +337,9 @@ jobs:
           ksu_type=$(echo "$ksu_options_normalized" | jq -r '.[0].type')
           ksu_ref=$(echo "$ksu_options_normalized" | jq -r '.[0].hash')
           
-          if [ "$ksu_type" == "KSUN" ]; then
-            KSU_REPO_OWNER="KernelSU-Next"
-            KSU_REPO_NAME="KernelSU-Next"
+          if [ "$ksu_type" == "SUKISU" ]; then
+            KSU_REPO_OWNER="SukiSU-Ultra"
+            KSU_REPO_NAME="SukiSU-Ultra"
           else
             KSU_REPO_OWNER="tiann"
             KSU_REPO_NAME="KernelSU"
@@ -567,9 +567,9 @@ jobs:
           ksu_type=$(echo "$ksu_options_normalized" | jq -r '.[0].type')
           ksu_ref=$(echo "$ksu_options_normalized" | jq -r '.[0].hash')
           
-          if [ "$ksu_type" == "KSUN" ]; then
-            KSU_REPO_OWNER="KernelSU-Next"
-            KSU_REPO_NAME="KernelSU-Next"
+          if [ "$ksu_type" == "SUKISU" ]; then
+            KSU_REPO_OWNER="SukiSU-Ultra"
+            KSU_REPO_NAME="SukiSU-Ultra"
           else
             KSU_REPO_OWNER="tiann"
             KSU_REPO_NAME="KernelSU"
@@ -739,7 +739,7 @@ jobs:
           ksu_ref="${{ fromJSON(steps.set-matrix.outputs.ksu_options_normalized)[0].hash }}"
           
           ksu_display=""
-          if [ "$ksu_type" = "KSUN" ] || [ "$ksu_type" = "KSU" ]; then
+          if [ "$ksu_type" = "SUKISU" ] || [ "$ksu_type" = "KSU" ]; then
             if [[ "$ksu_ref" =~ ^[0-9a-f]{40}$ ]]; then
               ksu_display+="📌 \`$ksu_type\`, \`$ksu_ref\`"
             else
@@ -1031,7 +1031,7 @@ jobs:
       REPO_NAME: ${{ github.event.repository.name }}
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       SUSFS_BASE_VERSION: ${{ needs.set-op-model.outputs.susfs_base_version }}
-      RELEASE_NAME: 'OnePlus Kernels With KernelSU Next & SUSFS ${{ needs.set-op-model.outputs.susfs_base_version }}'
+      RELEASE_NAME: 'OnePlus Kernels With SukiSU Ultra & SUSFS ${{ needs.set-op-model.outputs.susfs_base_version }}'
     steps:
       - name: 📥 Checkout code
         uses: actions/checkout@v6
@@ -1122,7 +1122,7 @@ jobs:
           for file in $(find downloaded-artifacts -maxdepth 1 -name "*.zip" -type f | sort); do
             if [ -f "$file" ]; then
               zipname=$(basename "$file" .zip)
-              rest="${zipname#SKF_}"
+              rest="${zipname#ENC_}"
               IFS='_' read -ra parts <<< "$rest"
               model="${parts[0]}"
               os_version="${parts[1]}"
@@ -1168,7 +1168,7 @@ jobs:
 
           cat << EOF > release_notes.md
           <div align="center">
-            <img src="https://readme-typing-svg.herokuapp.com?font=Fira+Code&weight=500&size=20&duration=3000&pause=1000&color=00FF99&center=true&vCenter=true&width=600&lines=KernelSU-Next+%2B+SUSFS+Release;Built+for+OnePlus+GKI+devices;Version+${NEW_TAG};Maintained+by+sakfi" alt="Typing SVG" />
+            <img src="https://readme-typing-svg.herokuapp.com?font=Fira+Code&weight=500&size=20&duration=3000&pause=1000&color=00FF99&center=true&vCenter=true&width=600&lines=SukiSU-Ultra+%2B+SUSFS+Release;Built+for+OnePlus+GKI+devices;Version+${NEW_TAG};Maintained+by+sakfi" alt="Typing SVG" />
           </div>
           
           <div align="center">
@@ -1252,8 +1252,8 @@ jobs:
           
           | Component | Version/Setting |
           |-----------|----------------|
-          | **KernelSU Next Branch** | \`${ksu_ref} (${ksu_resolved_hash:0:7})\` |
-          | **KernelSU Next Version** | \`$ksu_ver_global\` |
+          | **SukiSU Ultra Branch** | \`${ksu_ref} (${ksu_resolved_hash:0:7})\` |
+          | **SukiSU Ultra Version** | \`$ksu_ver_global\` |
           | **SUSFS Version** | \`$SUSFS_BASE_VERSION\` |
           | **Optimization Level** | \`$OPTIMIZE_LEVEL\` |
           | **Clean Build** | $( [ "$CLEAN_BUILD" = "true" ] && echo "✅ Yes" || echo "❌ No" ) |
@@ -1277,7 +1277,7 @@ jobs:
           
           | 🏷️ Feature | 📝 Description |
           |:---|:---|
-          | 🔐 **KernelSU-Next** | Next-generation kernel-level root solution |
+          | 🔐 **SukiSU Ultra** | KernelSU-based kernel-level root solution |
           | 🥷 **SUSFS** | Advanced root hiding with Magic Mount support |
           | 💻 **Droidspaces** | SYSVIPC support for multi-instance app environments |
           | 🔃 **NTSync** | Fast wine synchronization primitives for emulation |
@@ -1307,8 +1307,8 @@ jobs:
           ## 📱 Manager Applications
           
           ### Official Manager
-          - **KernelSU Next Manager**  
-            → [GitHub](https://github.com/KernelSU-Next/KernelSU-Next)
+          - **SukiSU Ultra Manager**  
+            → [GitHub Release](https://github.com/SukiSU-Ultra/SukiSU-Ultra/releases)
           
           ### SusFS Module
           - **KSU SUSFS Module** (Required for SUSFS features)  
@@ -1317,8 +1317,6 @@ jobs:
           ### Recommended Flasher
           - **Kernel Flasher** (Recommended for flashing AnyKernel3 ZIPs, backups and OTA)  
             → [GitHub Release](https://github.com/fatalcoder524/KernelFlasher/releases)
-          - **KSUN Built-in Flasher** (Alternative flasher)  
-            → Accessible directly within the KernelSU Next Manager app
           
           ---
           
@@ -1336,7 +1334,7 @@ jobs:
           1. Download the appropriate ZIP for your device from the Assets below.
           2. Flash the ZIP file using [Kernel Flasher](https://github.com/fatalcoder524/KernelFlasher) or [Horizon Kernel Flasher](https://github.com/libxzr/HorizonKernelFlasher).
           3. Reboot system.
-          4. Install KernelSU-Next Manager (or KernelSU Manager depending on build).
+          4. Install SukiSU Ultra Manager (or KernelSU Manager depending on build).
           5. Install SUSFS module from manager.
           
           ---
@@ -1384,7 +1382,7 @@ jobs:
           |:---:|:---:|:---:|
           | **Original Repository** | fatalcoder524 | [![GitHub](https://img.shields.io/badge/GitHub-fatalcoder524-blue?style=flat-square&logo=github)](https://github.com/fatalcoder524) |
           | **KernelSU** | tiann | [![GitHub](https://img.shields.io/badge/GitHub-tiann-blue?style=flat-square&logo=github)](https://github.com/tiann/KernelSU) |
-          | **KernelSU-Next** | rifsxd | [![GitHub](https://img.shields.io/badge/GitHub-rifsxd-blue?style=flat-square&logo=github)](https://github.com/KernelSU-Next/KernelSU-Next) |
+          | **SukiSU Ultra** | ShirkNeko | [![GitHub](https://img.shields.io/badge/GitHub-ShirkNeko-blue?style=flat-square&logo=github)](https://github.com/SukiSU-Ultra/SukiSU-Ultra) |
           | **SUSFS** | simonpunk | [![GitLab](https://img.shields.io/badge/GitLab-simonpunk-orange?style=flat-square&logo=gitlab)](https://gitlab.com/simonpunk/susfs4ksu.git) |
           | **SUSFS Module** | sidex15 | [![GitHub](https://img.shields.io/badge/GitHub-sidex15-blue?style=flat-square&logo=github)](https://github.com/sidex15) |
           | **Optimization Patches** | backslashxx | [![GitHub](https://img.shields.io/badge/GitHub-backslashxx-blue?style=flat-square&logo=github)](https://github.com/backslashxx) |
