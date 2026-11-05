@@ -395,8 +395,9 @@ jobs:
           merged_matrix=$(echo "$merged_matrix" | jq  --arg resolved_sha "$resolved_sha" 'map(.ksu_resolved_hash = $resolved_sha)')
           
           # SUSFS hash fetch
-          SUSFS_REPO="https://gitlab.com/simonpunk/susfs4ksu.git"
-          GITLAB_PROJECT_PATH="simonpunk/susfs4ksu"
+          SUSFS_REPO="https://github.com/ShirkNeko/susfs4ksu.git"
+          SUSFS_OWNER="ShirkNeko"
+          SUSFS_NAME="susfs4ksu"
           
           declare -A default_branches=(
             ["android12-5.10"]="gki-android12-5.10"
@@ -429,15 +430,13 @@ jobs:
             default_val="${default_branches[$key]}"
             user_val="${user_inputs[$key]:-$default_val}"
             
-            # Build GraphQL query — include blob fetch only when releasing
-            HASH_QUERY="{ project(fullPath: \"${GITLAB_PROJECT_PATH}\") { repository { ch: commit(ref: \"${user_val}\") { sha } } } }"
-            RELEASE_QUERY="{ project(fullPath: \"${GITLAB_PROJECT_PATH}\") { repository { ch: commit(ref: \"${user_val}\") { sha } blobs(paths: [\"kernel_patches/include/linux/susfs.h\"], ref: \"${user_val}\") { nodes { rawBlob } } } } }"
-            
-            if [ "${{ inputs.make_release }}" = "true" ]; then
-              GL_QUERY="$RELEASE_QUERY"
-            else
-              GL_QUERY="$HASH_QUERY"
-            fi
+            # GraphQL query: resolve ref (branch/tag/sha) and read susfs.h for the version
+            GH_QUERY='query($owner: String!, $name: String!, $expr: String!, $blobExpr: String!) {
+              repository(owner: $owner, name: $name) {
+                c: object(expression: $expr) { ... on Commit { oid } }
+                b: object(expression: $blobExpr) { ... on Blob { text } }
+              }
+            }'
             
             MAX_RETRIES=3
             RETRY_COUNT=0
@@ -445,16 +444,16 @@ jobs:
             resolved=""
             
             until [ $RETRY_COUNT -ge $MAX_RETRIES ]; do
-              RESPONSE=$(curl -s --fail -G "https://gitlab.com/api/graphql" --data-urlencode "query=$GL_QUERY")
+              RESPONSE=$(gh api graphql -f query="$GH_QUERY" -f owner="$SUSFS_OWNER" -f name="$SUSFS_NAME" -f expr="$user_val" -f blobExpr="${user_val}:kernel_patches/include/linux/susfs.h" 2>/dev/null || true)
               EXIT_CODE=$?
               
               if [ $EXIT_CODE -eq 0 ] && [ -n "$RESPONSE" ]; then
-                resolved=$(echo "$RESPONSE" | jq -r '.data.project.repository.ch.sha // empty')
+                resolved=$(echo "$RESPONSE" | jq -r '.data.repository.c.oid // empty')
                 if [ -n "$resolved" ] && [ "$resolved" != "null" ]; then
                   echo "  ✅ Query for $key Success"
                   
                   if [ "${{ inputs.make_release }}" = "true" ]; then
-                    extracted=$(echo "$RESPONSE" | jq -r '.data.project.repository.blobs.nodes[0].rawBlob // empty' | grep '#define SUSFS_VERSION' | awk -F'"' '{print $2}')
+                    extracted=$(echo "$RESPONSE" | jq -r '.data.repository.b.text // empty' | grep '#define SUSFS_VERSION' | awk -F'"' '{print $2}')
                     susfs_versions_per_key[$key]="${extracted:-unknown}"
                     echo "  ✅ $key → SUSFS_VERSION = ${extracted:-unknown}"
                   fi
@@ -464,13 +463,13 @@ jobs:
               fi
               
               RETRY_COUNT=$((RETRY_COUNT + 1))
-              echo "::warning::GitLab GraphQL API failed (Attempt $RETRY_COUNT/$MAX_RETRIES). Retrying..."
+              echo "::warning::GitHub GraphQL API failed (SUSFS) (Attempt $RETRY_COUNT/$MAX_RETRIES). Retrying..."
               sleep $RETRY_DELAY
             done
             
             # Final Validation — SUSFS hash
             if [ -z "$resolved" ] || [ "$resolved" = "null" ]; then
-              echo "::error::Could not resolve SUSFS ref '$user_val' for $key on GitLab."
+              echo "::error::Could not resolve SUSFS ref '$user_val' for $key on GitHub (ShirkNeko/susfs4ksu)."
               exit 1
             fi
             
@@ -626,8 +625,8 @@ jobs:
           merged_matrix=$(echo "$merged_matrix" | jq  --arg resolved_sha "$resolved_sha" 'map(.ksu_resolved_hash = $resolved_sha)')
           
           # SUSFS hash fetch
-          SUSFS_REPO="https://gitlab.com/simonpunk/susfs4ksu.git"
-          PROJECT_ID="simonpunk%2fsusfs4ksu"
+          SUSFS_REPO="https://github.com/ShirkNeko/susfs4ksu.git"
+          SUSFS_API_REPO="ShirkNeko/susfs4ksu"
           
           declare -A default_branches=(
             ["android12-5.10"]="gki-android12-5.10"
@@ -665,23 +664,23 @@ jobs:
             
             until [ $RETRY_COUNT -ge $MAX_RETRIES ]; do
               # We query the commit endpoint which accepts Branch, Tag, or SHA
-              RESULT=$(curl -s --fail "https://gitlab.com/api/v4/projects/${PROJECT_ID}/repository/commits/${user_val}")
+              RESULT=$(gh api "repos/${SUSFS_API_REPO}/commits/${user_val}" 2>/dev/null || true)
               EXIT_CODE=$?
               
               if [ $EXIT_CODE -eq 0 ] && [ -n "$RESULT" ]; then
-                resolved=$(echo "$RESULT" | jq -r '.id')
+                resolved=$(echo "$RESULT" | jq -r '.sha')
                 echo "  ✅ Query for $key input field Success"
                 break
               fi
               
               RETRY_COUNT=$((RETRY_COUNT + 1))
-              echo "::warning::GitLab API failed (Attempt $RETRY_COUNT/$MAX_RETRIES). Retrying..."
+              echo "::warning::GitHub API failed (Attempt $RETRY_COUNT/$MAX_RETRIES). Retrying..."
               sleep $RETRY_DELAY
             done
             
             # Final Validation
             if [ -z "$resolved" ] || [ "$resolved" = "null" ]; then
-               echo "::error::Could not resolve SUSFS ref '$user_val' for $key on GitLab."
+               echo "::error::Could not resolve SUSFS ref '$user_val' for $key on GitHub (ShirkNeko/susfs4ksu)."
                exit 1
             fi
             
@@ -1383,7 +1382,7 @@ jobs:
           | **Original Repository** | fatalcoder524 | [![GitHub](https://img.shields.io/badge/GitHub-fatalcoder524-blue?style=flat-square&logo=github)](https://github.com/fatalcoder524) |
           | **KernelSU** | tiann | [![GitHub](https://img.shields.io/badge/GitHub-tiann-blue?style=flat-square&logo=github)](https://github.com/tiann/KernelSU) |
           | **SukiSU Ultra** | ShirkNeko | [![GitHub](https://img.shields.io/badge/GitHub-ShirkNeko-blue?style=flat-square&logo=github)](https://github.com/SukiSU-Ultra/SukiSU-Ultra) |
-          | **SUSFS** | simonpunk | [![GitLab](https://img.shields.io/badge/GitLab-simonpunk-orange?style=flat-square&logo=gitlab)](https://gitlab.com/simonpunk/susfs4ksu.git) |
+          | **SUSFS** | simonpunk, ShirkNeko (fork) | [![GitHub](https://img.shields.io/badge/GitHub-ShirkNeko-blue?style=flat-square&logo=github)](https://github.com/ShirkNeko/susfs4ksu) |
           | **SUSFS Module** | sidex15 | [![GitHub](https://img.shields.io/badge/GitHub-sidex15-blue?style=flat-square&logo=github)](https://github.com/sidex15) |
           | **Optimization Patches** | backslashxx | [![GitHub](https://img.shields.io/badge/GitHub-backslashxx-blue?style=flat-square&logo=github)](https://github.com/backslashxx) |
           | **Optimization Patches** | liqideqq (Teemo) | [![GitHub](https://img.shields.io/badge/GitHub-liqideqq-blue?style=flat-square&logo=github)](https://github.com/liqideqq) |
