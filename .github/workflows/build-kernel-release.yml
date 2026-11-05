@@ -871,7 +871,7 @@ jobs:
       (needs.mirror_toolchain.result == 'success' || needs.mirror_toolchain.result == 'skipped') &&
       inputs.workflow_mode == 'Build & Release' &&
       fromJSON(needs.set-op-model.outputs.matrix_A16).include[0] != null
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     env:
       CCACHE_DIR: ${{ github.workspace }}/.ccache
       LDCACHE_DIR: ${{ github.workspace }}/.ld_cache
@@ -924,7 +924,7 @@ jobs:
       (needs.mirror_toolchain.result == 'success' || needs.mirror_toolchain.result == 'skipped') &&
       inputs.workflow_mode == 'Build & Release' &&
       fromJSON(needs.set-op-model.outputs.matrix_A15).include[0] != null
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     env:
       CCACHE_DIR: ${{ github.workspace }}/.ccache
       LDCACHE_DIR: ${{ github.workspace }}/.ld_cache
@@ -977,7 +977,7 @@ jobs:
       (needs.mirror_toolchain.result == 'success' || needs.mirror_toolchain.result == 'skipped') &&
       inputs.workflow_mode == 'Build & Release' &&
       fromJSON(needs.set-op-model.outputs.matrix_A14).include[0] != null
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     env:
       CCACHE_DIR: ${{ github.workspace }}/.ccache
       LDCACHE_DIR: ${{ github.workspace }}/.ld_cache
